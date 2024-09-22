@@ -72,3 +72,16 @@ export interface Order {
   orderItems: OrderItem[];
   user: User; // ربط الطلب بالمستخدم
 }
+
+export interface FormData {
+  id: string;
+  orderId?: string; // معرف الطلب المرتبط
+  senderName: string; // اسم المرسل
+  senderPhone: string; // هاتف المرسل
+  recipientName: string; // اسم المستلم
+  recipientPhone: string; // هاتف المستلم
+  recipientAddress: string; // عنوان المستلم
+  additionalNotes?: string; // ملاحظات إضافية
+  createdAt: Date; // تاريخ الإنشاء
+  updatedAt: Date; // تاريخ آخر تحديث
+}

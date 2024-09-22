@@ -1,17 +1,38 @@
 // app/(route)/cart/components/summary.tsx
 
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
-import Button from "@/components/ui/button";
 import Currency from "@/components/ui/currency";
 import useCart from "@/hooks/use-cart";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { FormUserData } from "@/components/form-user-data";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+interface FormDataType {
+  senderName: string;
+  senderPhone: string;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+  additionalNotes?: string;
+}
 
 const Summary = () => {
+  const [formData, setFormData] = useState<FormDataType | null>(null);
+  const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const items = useCart((state) => state.items);
   const removeAll = useCart((state) => state.removeAll);
@@ -33,10 +54,23 @@ const Summary = () => {
     return total + Number(item.price);
   }, 0);
 
+  // Handle form submission
+  const handleFormSubmit = (formData: FormDataType) => {
+    setFormData(formData); // حفظ البيانات مؤقتًا
+    setIsFormSubmitted(true); // تحديث حالة الإرسال
+    setIsDialogOpen(false); // إغلاق النافذة المنبثقة بعد الإرسال
+  };
+
   const onCheckout = async () => {
     if (!user) {
       // إذا لم يكن المستخدم مسجل الدخول، إعادة توجيهه إلى صفحة تسجيل الدخول
       router.push("/sign-in");
+      return;
+    }
+
+    if (!formData) {
+      // التأكد من أن بيانات formData ليست فارغة قبل الدفع
+      toast.error("يرجى تعبئة بيانات المرسل والمستلم قبل المتابعة.");
       return;
     }
 
@@ -51,9 +85,11 @@ const Summary = () => {
         userId: userId, // إرسال معرف المستخدم
         userName: userName, // إرسال اسم المستخدم
         userEmail: userEmail, // إرسال البريد الإلكتروني للمستخدم
+        formData, // Pass formData to the API
       }
     );
 
+    // إعادة توجيه إلى صفحة النجاح
     window.location = response.data.url;
   };
 
@@ -66,9 +102,36 @@ const Summary = () => {
           <Currency value={totalPrice} />
         </div>
       </div>
-      <Button onClick={onCheckout} className=" w-full mt-6">
-        Checkout
-      </Button>
+
+      {/* Display either the form button or checkout button */}
+      {!isFormSubmitted ? (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              className="w-full mt-6 font-semibold text-base bg-yellow-400 hover:bg-yellow-500 text-white"
+              disabled={items.length === 0}
+            >
+              متابعة
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>إضافة معلومات الطلب</DialogTitle>
+              <DialogDescription>
+                يرجى تعبئة الحقول المطلوبة قبل المتابعة.
+              </DialogDescription>
+            </DialogHeader>
+            <FormUserData onFormSubmit={handleFormSubmit} />
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Button
+          onClick={onCheckout}
+          className="w-full mt-6 font-semibold text-base bg-red-500 hover:bg-red-600 text-white"
+        >
+          تأكيد ودفع
+        </Button>
+      )}
     </div>
   );
 };
